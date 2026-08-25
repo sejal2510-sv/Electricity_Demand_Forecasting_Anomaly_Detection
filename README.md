@@ -1,23 +1,23 @@
 # Electricity Demand Forecasting & Anomaly Detection
 
-A time-series forecasting and anomaly detection project using historical electricity consumption data. The project compares **Seasonal Naive, ARIMA, SARIMA, and XGBoost** forecasting approaches and uses residual-based analysis to identify unusual electricity demand observations.
+A time-series forecasting and anomaly detection project using historical **PJM East (PJME) hourly electricity demand data**. The project converts hourly electricity load into daily demand, performs statistical time-series analysis, compares multiple forecasting models, and detects unusual demand observations using residual-based Z-score analysis.
 
 ---
 
 ## 📌 Project Overview
 
-Electricity demand varies over time due to factors such as day of the week, seasonal patterns, consumer behavior, and other external effects. Accurate electricity demand forecasting can support energy planning, resource allocation, and operational decision-making.
+Electricity demand changes over time due to weekly patterns, seasonal effects, consumer behavior, and other factors. Accurate demand forecasting can help in energy planning, resource allocation, and operational decision-making.
 
-This project develops a **time-series forecasting and anomaly detection system** using historical electricity consumption data.
+This project develops an end-to-end forecasting and anomaly detection workflow using historical **PJME electricity demand data**.
 
 The project compares four forecasting approaches:
 
 * Seasonal Naive Forecasting
 * ARIMA
 * SARIMA
-* XGBoost with time-series lag features
+* XGBoost Regression
 
-In addition, **residual-based anomaly detection** is performed to identify unusual electricity demand observations.
+In addition, **residual-based Z-score anomaly detection** is applied to identify unusually high or low electricity demand observations.
 
 ---
 
@@ -25,39 +25,313 @@ In addition, **residual-based anomaly detection** is performed to identify unusu
 
 The main objectives of this project are:
 
-1. Load and preprocess historical electricity consumption data.
-2. Convert high-frequency electricity measurements into daily electricity demand.
-3. Explore the time series using visualization and seasonal decomposition.
-4. Analyze autocorrelation and partial autocorrelation.
-5. Test the stationarity of the time series.
-6. Build and compare different forecasting models.
-7. Evaluate forecasting performance using MAE, RMSE, and MAPE.
-8. Detect unusual electricity demand observations using residual-based anomaly detection.
-9. Identify an effective forecasting approach based on model performance.
+1. Load and preprocess historical hourly electricity demand data.
+2. Handle duplicate timestamps and convert the data into a time-series format.
+3. Aggregate hourly electricity load into daily electricity demand.
+4. Analyze the time series using visualization and seasonal decomposition.
+5. Study autocorrelation using ACF and PACF.
+6. Test stationarity using ADF and KPSS tests.
+7. Build and compare statistical and machine-learning forecasting models.
+8. Evaluate forecasting performance using MAE, RMSE, and MAPE.
+9. Detect unusual demand observations using residual-based Z-score analysis.
 
 ---
 
 ## 📊 Dataset
 
-This project uses the **Electricity Load Diagrams 2011–2014 dataset** from the UCI Machine Learning Repository.
+The project uses the **PJME hourly electricity consumption dataset**, containing historical electricity demand measurements for the PJM East (PJME) region.
 
-The dataset contains electricity consumption measurements recorded at short time intervals for multiple customers.
+### Dataset File
 
-The dataset is automatically downloaded from UCI:
+```text
+PJME_hourly.csv
+```
 
-https://archive.ics.uci.edu/static/public/321/electricityloaddiagrams20112014.zip
+### Columns
 
-The original measurements are aggregated across customers and converted into daily electricity demand measured in **MWh**.
+| Column     | Description                                        |
+| ---------- | -------------------------------------------------- |
+| `Datetime` | Timestamp of the electricity demand observation    |
+| `PJME_MW`  | Electricity demand/load measured in megawatts (MW) |
 
-The analysis uses the complete years **2012–2014**, resulting in:
+The raw dataset contains approximately **145K+ hourly observations**.
+
+The notebook removes duplicate timestamps, converts the timestamp column to datetime format, and aggregates the hourly load into daily electricity demand.
+
+The analysis uses the complete years **2015–2017**, resulting in:
 
 ```text
 1096 daily observations
 ```
 
+Daily demand is calculated by summing the hourly `PJME_MW` values for each day.
+
 ---
 
-## 🛠️ Technologies & Libraries
+## 🔄 Project Workflow
+
+```text
+PJME Hourly Electricity Data
+            ↓
+       Data Loading
+            ↓
+      Data Cleaning
+            ↓
+   Datetime Conversion
+            ↓
+    Duplicate Removal
+            ↓
+ Hourly → Daily Aggregation
+            ↓
+  2015–2017 Data Selection
+            ↓
+ Exploratory Data Analysis
+            ↓
+ Seasonal Decomposition
+            ↓
+      ACF & PACF
+            ↓
+   ADF & KPSS Tests
+            ↓
+     Train / Test Split
+            ↓
+   ┌───────────────────────┐
+   │   Forecasting Models  │
+   ├───────────────────────┤
+   │ Seasonal Naive        │
+   │ ARIMA                 │
+   │ SARIMA                │
+   │ XGBoost               │
+   └───────────────────────┘
+            ↓
+    Model Evaluation
+            ↓
+   Forecast Comparison
+            ↓
+ Residual-Based Z-Score
+   Anomaly Detection
+```
+
+---
+
+## 🔬 Exploratory Data Analysis
+
+### Seasonal Decomposition
+
+An additive seasonal decomposition with a **7-day period** is performed to separate the daily electricity demand series into:
+
+* Observed
+* Trend
+* Seasonal
+* Residual
+
+The 7-day period is used to investigate weekly demand patterns.
+
+### ACF & PACF
+
+Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) are used to examine the dependence between electricity demand observations at different time lags.
+
+These plots help understand temporal dependence and support model selection.
+
+---
+
+## 📉 Stationarity Analysis
+
+Two statistical tests are used to examine the stationarity of the daily electricity demand series.
+
+### Augmented Dickey-Fuller (ADF) Test
+
+```text
+ADF Statistic = -3.1672
+p-value       = 0.0220
+```
+
+### KPSS Test
+
+```text
+KPSS Statistic = 0.1891
+p-value        = 0.1000
+```
+
+The ADF and KPSS tests provide complementary evidence about the stationarity characteristics of the series before forecasting.
+
+---
+
+## 🧪 Train-Test Split
+
+The final **30 days** are reserved as an unseen test set.
+
+```text
+Total observations = 1096 days
+Training set       = 1066 days
+Testing set        = 30 days
+Forecast horizon   = 30 days
+```
+
+All forecasting models are evaluated on the same 30-day test period.
+
+---
+
+# 📈 Forecasting Models
+
+## 1. Seasonal Naive Forecasting
+
+Seasonal Naive forecasting is used as a baseline model.
+
+The model uses the demand pattern from the previous week to forecast the next 30 days.
+
+This provides a simple benchmark for comparison with more advanced forecasting methods.
+
+---
+
+## 2. ARIMA
+
+An automatic ARIMA model is fitted using `auto_arima`.
+
+ARIMA captures temporal dependencies through:
+
+* Autoregressive terms
+* Differencing
+* Moving-average terms
+
+The model generates forecasts for the 30-day test period.
+
+---
+
+## 3. SARIMA
+
+A Seasonal ARIMA model is fitted with a weekly seasonal period:
+
+```text
+m = 7
+```
+
+SARIMA extends ARIMA by explicitly incorporating seasonal patterns, making it suitable for electricity demand data with weekly behavior.
+
+---
+
+## 4. XGBoost
+
+XGBoost is used as a machine-learning-based forecasting approach.
+
+The following features are created:
+
+### Calendar Features
+
+* Day of week
+* Month
+
+### Lag Features
+
+* Lag 1
+* Lag 7
+* Lag 14
+
+### Rolling Feature
+
+* 7-day rolling mean
+
+The model generates forecasts recursively over the 30-day test period.
+
+---
+
+# 📊 Model Evaluation
+
+The forecasting models are evaluated using:
+
+### MAE
+
+Mean Absolute Error measures the average absolute difference between actual and predicted electricity demand.
+
+### RMSE
+
+Root Mean Squared Error gives greater weight to larger forecasting errors.
+
+### MAPE
+
+Mean Absolute Percentage Error measures forecasting error in percentage terms.
+
+---
+
+## Model Comparison
+
+| Model          |           MAE |           RMSE |       MAPE |
+| -------------- | ------------: | -------------: | ---------: |
+| **ARIMA**      | **85,117.68** | **108,558.83** | **10.04%** |
+| SARIMA         |     89,510.49 |     115,711.81 |     10.52% |
+| Seasonal Naive |    109,867.43 |     136,883.25 |     13.06% |
+| XGBoost        |    114,851.83 |     142,211.86 |     13.66% |
+
+### Best Performing Model
+
+**ARIMA achieved the best overall forecasting performance**, obtaining the lowest MAE, RMSE, and MAPE among the four tested models.
+
+```text
+Best Model : ARIMA
+MAE        : 85,117.68
+RMSE       : 108,558.83
+MAPE       : 10.04%
+```
+
+---
+
+# 🚨 Anomaly Detection
+
+A **residual-based Z-score approach** is used to identify unusual electricity demand observations.
+
+The residuals obtained from the seasonal decomposition are standardized using:
+
+```text
+Z = (Residual - Mean Residual) / Standard Deviation
+```
+
+Observations satisfying:
+
+```text
+|Z| > 3
+```
+
+are classified as potential anomalies.
+
+### Result
+
+```text
+Detected potential anomalies = 8
+Z-score threshold             = |Z| > 3
+```
+
+The detected points represent unusually high or low electricity demand relative to the residual behavior of the decomposed time series.
+
+---
+
+# 📌 Key Results
+
+* Analyzed **1096 daily electricity demand observations** from 2015–2017.
+* Performed **7-day seasonal decomposition** to study weekly demand patterns.
+* Applied **ACF and PACF** analysis to examine temporal dependencies.
+* Conducted **ADF and KPSS stationarity tests**.
+* Compared **Seasonal Naive, ARIMA, SARIMA, and XGBoost** forecasting models.
+* **ARIMA achieved the best performance** with MAE of **85,117.68**, RMSE of **108,558.83**, and MAPE of **10.04%**.
+* Applied **residual-based Z-score anomaly detection** with a threshold of **|Z| > 3**.
+* Detected **8 potential electricity demand anomalies**.
+
+---
+
+# 💼 Business Applications
+
+Electricity demand forecasting and anomaly detection can support:
+
+* Power generation planning
+* Energy resource allocation
+* Grid management
+* Demand planning
+* Operational decision-making
+* Identification of unusual consumption patterns
+* Energy efficiency analysis
+
+---
+
+# 🛠️ Technologies & Libraries
 
 ### Programming Language
 
@@ -89,351 +363,65 @@ The analysis uses the complete years **2012–2014**, resulting in:
 * MAE
 * RMSE
 * MAPE
-* Residual-Based Anomaly Detection
-
----
-
-## 🔄 Project Workflow
-
-```text
-Raw Electricity Data
-        ↓
-Data Loading
-        ↓
-Data Cleaning
-        ↓
-Datetime Conversion
-        ↓
-Aggregation Across Customers
-        ↓
-Daily Electricity Demand
-        ↓
-Exploratory Data Analysis
-        ↓
-Seasonal Decomposition
-        ↓
-ACF & PACF Analysis
-        ↓
-Stationarity Testing
-        ↓
-Train / Test Split
-        ↓
-┌─────────────────────────────────┐
-│        Forecasting Models       │
-├─────────────────────────────────┤
-│ Seasonal Naive                  │
-│ ARIMA                           │
-│ SARIMA                          │
-│ XGBoost                         │
-└─────────────────────────────────┘
-        ↓
-Model Evaluation
-        ↓
-Forecast Comparison
-        ↓
-Residual-Based Anomaly Detection
-```
-
----
-
-# 📈 Forecasting Models
-
-## 1. Seasonal Naive Forecasting
-
-A seasonal naive model is used as the baseline forecasting approach.
-
-The model repeats the electricity demand pattern from the previous week to forecast the next 30 days.
-
-This provides a simple benchmark against which the more advanced forecasting models can be compared.
-
----
-
-## 2. ARIMA
-
-An automatic ARIMA model is fitted using `auto_arima`.
-
-ARIMA models capture temporal dependencies in the electricity demand series through autoregressive, differencing, and moving-average components.
-
-The model is used to generate a 30-day forecast.
-
----
-
-## 3. SARIMA
-
-A seasonal ARIMA model is fitted with a weekly seasonal period:
-
-```text
-m = 7
-```
-
-SARIMA extends ARIMA by explicitly modeling seasonal patterns.
-
-This makes it suitable for electricity demand data where weekly patterns may be present.
-
----
-
-## 4. XGBoost Forecasting
-
-XGBoost is used as a machine-learning-based forecasting model.
-
-Several time-series features are created.
-
-### Calendar Features
-
-* Day of week
-* Month
-
-### Lag Features
-
-* Lag 1
-* Lag 7
-* Lag 14
-
-### Rolling Feature
-
-* 7-day rolling mean
-
-The XGBoost model is then used to generate forecasts recursively over the 30-day test period.
-
----
-
-# 🔬 Exploratory Data Analysis
-
-The project analyzes the electricity demand series using several time-series techniques.
-
-## Seasonal Decomposition
-
-An additive seasonal decomposition with a **7-day period** is performed to separate the series into:
-
-```text
-Observed
-Trend
-Seasonal
-Residual
-```
-
-This helps identify weekly patterns and irregular fluctuations.
-
-## ACF and PACF
-
-Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots are used to study the dependence between observations at different lags.
-
----
-
-# 📉 Stationarity Analysis
-
-Two statistical tests are used to investigate stationarity.
-
-## Augmented Dickey-Fuller Test
-
-The ADF test is used to test for the presence of a unit root.
-
-For the analyzed series:
-
-```text
-ADF Statistic = -1.8519
-p-value       = 0.3550
-```
-
-## KPSS Test
-
-The KPSS test is also used to assess stationarity.
-
-For the analyzed series:
-
-```text
-KPSS Statistic = 0.4440
-p-value        = 0.0582
-```
-
-These tests provide complementary evidence about the time-series behavior before forecasting.
-
----
-
-# 🧪 Train-Test Split
-
-The final **30 days** are reserved as the test set.
-
-```text
-Training observations = 1066 days
-Testing observations  = 30 days
-Forecast horizon      = 30 days
-```
-
-The forecasting models are trained using the historical training data and evaluated on the unseen 30-day test period.
-
----
-
-# 📊 Model Evaluation
-
-The forecasting models are evaluated using three metrics.
-
-### MAE
-
-**Mean Absolute Error** measures the average absolute difference between actual and predicted demand.
-
-### RMSE
-
-**Root Mean Squared Error** gives greater importance to larger prediction errors.
-
-### MAPE
-
-**Mean Absolute Percentage Error** measures prediction error in percentage terms.
-
----
-
-## Model Comparison
-
-| Model          |    MAE |       RMSE |      MAPE |
-| -------------- | -----: | ---------: | --------: |
-| Seasonal Naive | 170.30 | **399.22** | **4.75%** |
-| XGBoost        | 190.11 |     405.25 |     5.14% |
-| ARIMA          | 179.20 |     408.82 |     4.97% |
-| SARIMA         | 174.68 |     417.92 |     4.91% |
-
-Based on RMSE, the **Seasonal Naive model achieved the lowest error** among the tested models for this particular 30-day test period.
-
-XGBoost achieved competitive performance, while ARIMA and SARIMA provided additional statistical forecasting benchmarks.
-
----
-
-# 🚨 Anomaly Detection
-
-A residual-based anomaly detection approach is implemented.
-
-The residual component obtained from the seasonal decomposition is standardized using a Z-score:
-
-```text
-Z = (Residual - Mean Residual) / Standard Deviation
-```
-
-Observations satisfying:
-
-```text
-|Z| > 3
-```
-
-are classified as potential anomalies.
-
-The analysis detected:
-
-```text
-10 potential anomaly points
-```
-
-These observations represent unusually high or low electricity demand relative to the residual behavior of the decomposed series.
-
----
-
-# 📌 Key Results
-
-The project demonstrates a complete workflow for electricity demand forecasting and anomaly detection.
-
-* **1096** daily observations were analyzed.
-* Weekly seasonality was investigated using decomposition and autocorrelation analysis.
-* ADF and KPSS tests were used for stationarity assessment.
-* Four forecasting approaches were compared.
-* The final 30 days were used as an out-of-sample test set.
-* **Seasonal Naive achieved the lowest RMSE of 399.22.**
-* XGBoost achieved an RMSE of **405.25**.
-* Residual-based anomaly detection identified **10 potential anomalies**.
-
----
-
-# 💼 Business Applications
-
-Electricity demand forecasting and anomaly detection can support:
-
-* Power generation planning
-* Energy resource allocation
-* Grid management
-* Demand planning
-* Operational decision-making
-* Identification of unusual consumption behavior
-* Energy efficiency analysis
-
----
-
-# 🚀 Future Improvements
-
-The current project can be extended by incorporating:
-
-* Temperature and weather variables
-* Holidays and special events
-* Public holidays
-* Hourly forecasting
-* Prophet or other forecasting models
-* LightGBM/CatBoost comparison
-* Hyperparameter tuning
-* Walk-forward validation
-* Prediction intervals
-* More advanced anomaly detection techniques
-* Real-time electricity demand forecasting
+* Residual-Based Z-score Anomaly Detection
 
 ---
 
 # 📁 Repository Structure
 
 ```text
-electricity-demand-forecasting-anomaly-detection/
+Electricity_Demand_Forecasting_Anomaly_Detection/
 │
-├── Electricity_Demand_Forecasting.ipynb
+├── Electricity-demand-forecasting-anomaly-detection.ipynb
+├── PJME_hourly.csv
 ├── README.md
-├── requirements.txt
-├── .gitignore
-│
-└── results/
-    ├── demand_forecast.png
-    └── anomaly_detection.png
+└── LICENSE
 ```
 
 ---
 
-# ▶️ How to Run the Project
+# ▶️ How to Run
 
 ## Option 1: Google Colab
 
-Open the notebook in Google Colab and run the cells sequentially.
+1. Open the notebook in Google Colab.
+2. Upload `PJME_hourly.csv` to the Colab environment.
+3. Run the notebook cells sequentially.
+4. The notebook performs preprocessing, EDA, forecasting, evaluation, and anomaly detection.
 
-The notebook automatically downloads the required electricity dataset.
+The notebook expects the dataset at:
+
+```python
+/content/PJME_hourly.csv
+```
 
 ## Option 2: Local Python Environment
 
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/electricity-demand-forecasting-anomaly-detection.git
+git clone https://github.com/sejal2510-sv/Electricity_Demand_Forecasting_Anomaly_Detection.git
 ```
 
 Move into the project directory:
 
 ```bash
-cd electricity-demand-forecasting-anomaly-detection
+cd Electricity_Demand_Forecasting_Anomaly_Detection
 ```
 
-Install the required packages:
+Install the required libraries:
 
 ```bash
-pip install -r requirements.txt
+pip install numpy pandas matplotlib statsmodels pmdarima xgboost scikit-learn
 ```
 
-Open the notebook using Jupyter Notebook or VS Code.
+Open the notebook using Jupyter Notebook, JupyterLab, VS Code, or another compatible environment.
 
 ---
 
-# 📦 Requirements
+# 📄 License
 
-Create a `requirements.txt` file containing:
-
-```text
-numpy
-pandas
-matplotlib
-statsmodels
-pmdarima
-xgboost
-scikit-learn
-```
+This project is licensed under the MIT License.
 
 ---
 
@@ -441,6 +429,6 @@ scikit-learn
 
 **Sejal Verma**
 
-*M.Sc. Statistics*
+M.Sc. Statistics
 
 This project was developed as a practical application of statistical time-series analysis and machine learning for electricity demand forecasting and anomaly detection.
